@@ -1,5 +1,6 @@
 import { fetcher } from "@fly-dynamo/config/fetcher/fetcher.config";
-import { fetchTodo } from "./todo.api";
+import NotFound from "../not-found";
+import { delay, fetchTodo } from "./todo.api";
 import { Todo } from "./todo.type";
 
 export const preload = (id: number) => {
@@ -17,6 +18,9 @@ function Todo({ todo }: { todo: Todo }) {
 }
 
 export default async function TodoPage() {
+ 
+
+  await delay(2000);
   const [todo1, todo2] = await Promise.all([fetchTodo(1), fetchTodo(2)]);
   return (
     <div>
