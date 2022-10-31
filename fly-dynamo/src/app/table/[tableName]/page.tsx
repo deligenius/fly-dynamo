@@ -7,39 +7,36 @@ import {
 import { dynamodbDoc } from "@fly-dynamo/config/fetcher/aws/dynamoDb/dynamoDb.config";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { getTableMetadata, scanTable } from "../table.api";
+import { JsonView } from "./JsonView.client";
+import "./prism.css"
 
-const scanTable = async (tableName: string) => {
-  const command = new ScanCommand({
-    TableName: tableName,
-    Limit: 50,
-  });
+interface TableKeys {
+  hashKey: string;
+  rangeKey?: string;
+}
 
-  const result = await dynamodbDoc.send(command);
-  return result;
-};
+const getTableInfo = async (tableName: string) => {
+  const [scanRes, describeRes] = await Promise.all([
+    scanTable(tableName), getTableMetadata(tableName)
+  ])
 
-const getItem = async (tableName: string) => {
-  const command = new GetCommand({
-    TableName: tableName,
-    Key: {
-      id: "1",
-    },
-  });
-  const result = await dynamodbDoc.send(command);
-  return result;
-};
+  const tableKeys = describeRes.Table!.KeySchema!.reduce((accu, item)=> {
+    if (item.KeyType === "HASH") {
+      accu.hashKey = item.AttributeName!
+    } else if (item.KeyType === "RANGE") {
+      accu.rangeKey = item.AttributeName!
+    }
+    return accu
+  }, {} as TableKeys)
 
-const putItem = async (tableName: string) => {
-  const command = new PutCommand({
-    TableName: tableName,
-    Item: {
-      id: "1",
-      name: "Yan",
-    },
-  });
-  const result = await dynamodbDoc.send(command);
-  return result;
-};
+  return {
+    tableKeys,
+    items: scanRes.Items
+  }
+}
+
+
 
 export default async function TablePage({
   params,
@@ -51,11 +48,21 @@ export default async function TablePage({
     redirect("/table");
   }
 
-  const res = await scanTable(params.tableName);
+  const {items, tableKeys} = await getTableInfo(params.tableName);
+  
+  if(!items?.length){
+    return <div>No items available</div>
+  }
 
-  console.log(res);
-  // if (Object.keys(Attributes!).length) {
-  //   return <div>something</div>;
-  // }
-  return <> nothing</>;
+  return (
+    <>
+      {items?.map((item, index) => (
+        <div key={item.id ?? index}>
+          <span>HashKey{item[tableKeys?.hashKey]}</span>
+          <JsonView item={item ?? {}} />
+        </div>
+        
+      ))}
+    </>
+  );
 }

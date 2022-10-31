@@ -4,9 +4,9 @@ import {
   DynamoDBDocument,
 } from "@aws-sdk/lib-dynamodb";
 
-const client = new DynamoDBClient({
+export const dynamo = new DynamoDBClient({
   region: "us-west-2",
   endpoint: "http://localhost:8002",
 });
 
-export const dynamodbDoc = DynamoDBDocument.from(client, {});
+export const dynamodbDoc = DynamoDBDocument.from(dynamo, {});
